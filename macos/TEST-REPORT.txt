@@ -1,0 +1,28 @@
+Capture Access macOS v0.2.0 �� ��֤��¼
+���ڣ�2026-11-16
+
+����������Windows 11 x64��û�� macOS SDK �� Swift ��������
+
+��ִ��
+1. tree-sitter Swift �﷨������Package.swift��6 ����ƷԴ���ļ���1 ����Ԫ����Դ���ļ����� 8 ���ļ������﷨�����ȱʧ�ڵ㡣
+   ��ֻ���﷨���������� Swift ���ͼ���ԭ�����롣
+2. �� Python plistlib �������� Info.plist���˶Կ�ִ���ļ�����Bundle ID��APPL ���ͺ���� macOS 14.0 ���á�
+3. �� Git for Windows �� Bash ִ�� bash -n ��� build.sh���﷨���ͨ����
+4. ִ�� build.sh --help������˵��������
+5. �ڷ� macOS ��ִ�� build.sh����Ԥ�ڷ��ش�����ȷҪ�� macOS �� Xcode/Command Line Tools��
+6. �˶� Swift �� Shell Դ�ļ�Ϊ���� BOM �� UTF-8 / LF����ֹ�� Mac �ϳ��� CRLF �ű����⡣
+7. Windows ����Ǩ�ƺ�8 ��Դ��ͽű��ļ��� SHA-256 ����ǰ������һ�£�PowerShell �����Ͳ��Խű��﷨����ͨ����
+
+�Ѽ��뵫δִ��
+- XCTest��Retina �ߴ硢�Ƿ��ߴ硢����ͼ���ڴ�߽硢PNG �������������֤��
+- macOS ��Ԫ���ԡ�Swift ���ͼ�顢arm64/x86_64 ���롢ͨ�ö����ƴ����ǩ����֤��
+- ϵͳѡ��������Ļ¼����Ȩ�����ڽ�ͼ�����桢�����弰��ʽ���ڱ���ʵ�⡣
+
+Mac �ϵĺ�����֤
+����Ŀ��Ŀ¼ִ�У�bash macos/build.sh
+�� macos Ŀ¼ִ�У�swift test
+���� Tests/MANUAL-TESTS.txt ����ֶ����ա�
+
+��Ϊ�߽�
+Mac �����û�ȷ�ϵġ�ֱ�ӽ�ͼ��ʵ�֣����� Windows ������ȡ���������Ƶ���ֲ��
+���뷵�ؽ�ͼ�������˹����Ԥ��������֤�����ܱ������ݿɼ���

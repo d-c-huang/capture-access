@@ -1,0 +1,59 @@
+name: Build macOS app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'macos/**'
+      - '.github/workflows/build-macos.yml'
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: App architecture
+        required: true
+        default: universal
+        type: choice
+        options:
+          - universal
+          - arm64
+          - x86_64
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+      TARGET_ARCH: ${{ inputs.architecture || 'universal' }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Show native build environment
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Run Swift unit tests on macOS
+        working-directory: macos
+        run: swift test
+
+      - name: Build app and ZIP on macOS
+        run: bash macos/build.sh --arch "$TARGET_ARCH"
+
+      - name: Write checksums
+        run: shasum -a 256 macos/dist/*.zip > macos/dist/SHA256SUMS.txt
+
+      - name: Upload app ZIP and checksums
+        uses: actions/upload-artifact@v6
+        with:
+          name: CaptureAccess-macOS-${{ env.TARGET_ARCH }}
+          path: |
+            macos/dist/*.zip
+            macos/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

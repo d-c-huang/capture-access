@@ -1,0 +1,6 @@
+/windows/obj/
+/windows/dist/
+/macos/.build/
+/macos/.swiftpm/
+/macos/dist/
+.DS_Store
