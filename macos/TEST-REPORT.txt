@@ -1,9 +1,13 @@
 Capture Access macOS v0.2.0 — 验证记录
 日期：2026-11-16
 
-开发主机：Windows 11 x64；没有 macOS SDK 或 Swift 编译器。
+成功构建：https://github.com/d-c-huang/capture-access/actions/runs/43838699586
+源码提交：2202a0920560437d7e610eeddbee0b4c3cf28784
+构建主机：GitHub-hosted macos-15 ARM64，macOS 15.8.2。
+工具链：Xcode 16.4，Apple Swift 6.1.2，Swift 5 语言模式，最低系统 macOS 14.0。
+Windows 主机未执行 macOS 编译或打包，只用于源码编辑和取回云端生成的成品。
 
-已执行
+静态检查
 1. tree-sitter Swift 语法解析：Package.swift、6 个产品源码文件、1 个单元测试源码文件，共 8 个文件，无语法错误或缺失节点。
    这只是语法解析，不是 Swift 类型检查或原生编译。
 2. 用 Python plistlib 解析两份 Info.plist，核对可执行文件名、Bundle ID、APPL 类型和最低 macOS 14.0 配置。
@@ -13,16 +17,38 @@ Capture Access macOS v0.2.0 — 验证记录
 6. 核对 Swift 与 Shell 源文件为不带 BOM 的 UTF-8 / LF，防止在 Mac 上出现 CRLF 脚本问题。
 7. Windows 代码迁移后，8 个源码和脚本文件的 SHA-256 与先前交付包一致；PowerShell 构建和测试脚本语法解析通过。
 
-已加入但未执行
-- XCTest：Retina 尺寸、非法尺寸、超大图像内存边界、PNG 编解码与像素验证。
-- macOS 单元测试、Swift 类型检查、arm64/x86_64 编译、通用二进制打包与签名验证。
-- 系统选择器、屏幕录制授权、窗口截图、保存、剪贴板及旧式窗口保护实测。
+已通过的 macOS 原生验证
+1. Swift 主程序、演示程序和 CaptureCore 库编译成功。
+2. XCTest 共 4 项，0 失败、0 跳过：
+   - 无效窗口尺寸、NaN 和零缩放拒绝。
+   - 大图内存边界与等比缩放。
+   - PNG 编码、解码、尺寸和明确 sRGB/RGBA 像素验证。
+   - Retina 点到像素尺寸转换。
+3. arm64 Release 构建成功。
+4. x86_64 Release 交叉构建成功。
+5. lipo 合并主程序和演示程序为 universal Mach-O。
+6. 两份 Info.plist 通过 plutil 检查。
+7. 嵌套演示应用和主应用完成本地 ad-hoc 签名。
+8. codesign --verify --deep --strict 显示 valid on disk，满足 Designated Requirement。
+9. 在 Mac runner 上使用 ditto 生成并上传应用 ZIP；成品没有在 Windows 上重新打包。
 
-Mac 上的后续验证
-在项目根目录执行：bash macos/build.sh
-在 macos 目录执行：swift test
-按照 Tests/MANUAL-TESTS.txt 完成手动验收。
+成品
+CaptureAccess-macOS-universal.zip
+SHA-256：44ee52221ec3652e0815ae9daf119a46390e905a4d230a56ddd2a6239506c57c
+主程序和演示程序均包含 arm64 与 x86_64 切片，ZIP 保留可执行位。
+下载后核对了 GitHub artifact 摘要、内层 ZIP 摘要、应用包配置和两份通用可执行文件架构。
+首次云端测试修正了 CGFloat.infinity 的类型歧义，并将 PNG 测试固定为 sRGB 色彩空间。
+源码上传使用明确 UTF-8 编码，已核对仓库文本与本地源码一致。
+
+仍需手动验收
+- 真实 Mac 上的应用启动和界面布局。
+- 系统窗口选择器与屏幕录制授权。
+- 实际窗口、旧式分享保护窗口的截图效果。
+- Retina / 多显示器、PNG 保存、剪贴板与取消/超时流程。
+- Intel 实机运行、macOS 14 实机运行。
+步骤：Tests/MANUAL-TESTS.txt。
 
 行为边界
 Mac 版是用户确认的“直接截图”实现，不是 Windows 进程内取消保护机制的移植。
 代码返回截图后仍需人工检查预览；不保证所有受保护内容可见。
+本次为本地 ad-hoc 签名，不是 Developer ID 签名，未经过 Apple 公证。

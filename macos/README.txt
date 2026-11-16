@@ -79,15 +79,19 @@ build.sh                             构建、签名和 ZIP 打包脚本
 不要直接用 swift run 代替正式 .app 验收：无 Bundle 时，权限身份、演示路径和启动行为可能不同。
 
 当前验证状态
-本次开发主机是 Windows，没有 macOS SDK。
-macOS 原生编译、单元测试、权限流程和截图效果均尚未执行。
-已执行的静态检查记录在 TEST-REPORT.txt。
+已在 GitHub 的 macOS 15.8.2 ARM64 主机上原生构建，使用 Xcode 16.4 / Swift 6.1.2。
+4 项 XCTest 全部通过，arm64 与 x86_64 两种 Release 构建成功，并已合并为 universal 应用。
+codesign --verify --deep --strict 验证通过，已上传原始 Mac 生成的 ZIP。
+实际窗口截图、系统授权、剪贴板和界面仍需在 Mac 上手动验收。
+详细记录：TEST-REPORT.txt。
 
 GitHub macOS 构建
 仓库根目录的 .github/workflows/build-macos.yml 支持手动触发。
 在 GitHub Actions 中选择 Build macOS app，选择 universal / arm64 / x86_64。
 它在 macos-15 主机运行 swift test 和本目录的 build.sh，再上传应用 ZIP 与校验值。
-整个原生编译和打包过程在 Mac 上执行；当前尚未触发构建。
+整个原生编译和打包过程在 Mac 上执行。
+main 分支中的 macOS 代码或工作流更新也会自动触发；文档记录提交可使用 [skip ci] 避免重复构建。
+成功构建：https://github.com/d-c-huang/capture-access/actions/runs/43838699586
 
 接口参考（官方）
 https://developer.apple.com/documentation/screencapturekit/sccontentsharingpicker

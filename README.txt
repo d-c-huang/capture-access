@@ -30,10 +30,11 @@ macOS
 项目已提供 .github/workflows/build-macos.yml。
 将项目放入自己的 GitHub 仓库后，在 Actions 中选择 Build macOS app，手动执行 Run workflow。
 默认生成同时支持 Apple Silicon 与 Intel 的 universal 应用。
-测试、编译、签名和 ZIP 打包均运行在 GitHub 的 macos-15 主机。
+测试、编译、签名和 ZIP 打包均运行在 GitHub 的 macos-15 主机；main 分支中的 macOS 代码更新也会自动触发。
 成功后从构建的 Artifacts 下载 ZIP；压缩包内是带应用包结构的 CaptureAccess.app。
 默认本地 ad-hoc 签名，不等于 Developer ID 签名或 Apple 公证。
-当前仅准备了构建流程，尚未上传仓库或启动云端构建。
+源码仓库：https://github.com/d-c-huang/capture-access
+已成功构建：https://github.com/d-c-huang/capture-access/actions/runs/43838699586
 
 两平台的实现差异
 Windows 版修改所选窗口的保护标志，随后可使用其他截图工具捕获。
@@ -44,5 +45,6 @@ DRM、应用主动隐藏内容或其他保护机制仍可能产生空白图像�
 
 验证范围
 Windows：既有核心集成测试通过，用户此前已手动确认测试可用。
-macOS：当前开发主机为 Windows，未执行 macOS 原生编译、Swift 单元测试或截图实测。
-请在 Mac 上执行构建与手动验收；源码中的测试用例不代表已运行通过。
+macOS：在 GitHub 的 macOS 15.8.2 ARM64 主机上完成原生构建，4 项 XCTest 全部通过。
+已生成 arm64 + x86_64 通用 .app，codesign 验证通过；本地 Windows 仅编辑源码和下载云端成品。
+系统窗口选择器、真实目标窗口、授权流程和剪贴板仍需在 Mac 上手动验收。
