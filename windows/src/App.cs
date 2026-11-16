@@ -128,7 +128,7 @@ namespace CaptureAccess {
         internal MainForm() {
             Text="Capture Access · 窗口截图保护助手";
             Font=new Font("Microsoft YaHei UI",9F); StartPosition=FormStartPosition.CenterScreen;
-            AutoScaleDimensions=new SizeF(96F,96F); AutoScaleMode=AutoScaleMode.Dpi; ClientSize=new Size(1100,820); MinimumSize=new Size(980,740);
+            AutoScaleDimensions=new SizeF(96F,96F); AutoScaleMode=AutoScaleMode.Dpi; ClientSize=new Size(1100,680); MinimumSize=new Size(980,680);
             BackColor=Color.FromArgb(246,247,249);
             var layout=new TableLayoutPanel { Dock=DockStyle.Fill,Padding=new Padding(24),ColumnCount=1,RowCount=8 };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
