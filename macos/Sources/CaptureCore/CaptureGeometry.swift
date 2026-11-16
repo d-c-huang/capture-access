@@ -7,8 +7,8 @@ public enum CaptureFailure: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidSize: return "���ڳߴ���Ч����ȷ�ϴ����Կɼ���Ȼ������ѡ��"
-        case .pngEncoding: return "�޷����� PNG ͼƬ�������½�ͼ��"
+        case .invalidSize: return "窗口尺寸无效。请确认窗口仍可见，然后重新选择。"
+        case .pngEncoding: return "无法编码 PNG 图片，请重新截图。"
         }
     }
 }

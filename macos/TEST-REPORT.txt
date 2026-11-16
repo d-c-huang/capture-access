@@ -1,28 +1,28 @@
-Capture Access macOS v0.2.0 �� ��֤��¼
-���ڣ�2026-11-16
+Capture Access macOS v0.2.0 — 验证记录
+日期：2026-11-16
 
-����������Windows 11 x64��û�� macOS SDK �� Swift ��������
+开发主机：Windows 11 x64；没有 macOS SDK 或 Swift 编译器。
 
-��ִ��
-1. tree-sitter Swift �﷨������Package.swift��6 ����ƷԴ���ļ���1 ����Ԫ����Դ���ļ����� 8 ���ļ������﷨�����ȱʧ�ڵ㡣
-   ��ֻ���﷨���������� Swift ���ͼ���ԭ�����롣
-2. �� Python plistlib �������� Info.plist���˶Կ�ִ���ļ�����Bundle ID��APPL ���ͺ���� macOS 14.0 ���á�
-3. �� Git for Windows �� Bash ִ�� bash -n ��� build.sh���﷨���ͨ����
-4. ִ�� build.sh --help������˵��������
-5. �ڷ� macOS ��ִ�� build.sh����Ԥ�ڷ��ش�����ȷҪ�� macOS �� Xcode/Command Line Tools��
-6. �˶� Swift �� Shell Դ�ļ�Ϊ���� BOM �� UTF-8 / LF����ֹ�� Mac �ϳ��� CRLF �ű����⡣
-7. Windows ����Ǩ�ƺ�8 ��Դ��ͽű��ļ��� SHA-256 ����ǰ������һ�£�PowerShell �����Ͳ��Խű��﷨����ͨ����
+已执行
+1. tree-sitter Swift 语法解析：Package.swift、6 个产品源码文件、1 个单元测试源码文件，共 8 个文件，无语法错误或缺失节点。
+   这只是语法解析，不是 Swift 类型检查或原生编译。
+2. 用 Python plistlib 解析两份 Info.plist，核对可执行文件名、Bundle ID、APPL 类型和最低 macOS 14.0 配置。
+3. 用 Git for Windows 的 Bash 执行 bash -n 检查 build.sh，语法检查通过。
+4. 执行 build.sh --help，参数说明正常。
+5. 在非 macOS 上执行 build.sh，按预期返回错误，明确要求 macOS 与 Xcode/Command Line Tools。
+6. 核对 Swift 与 Shell 源文件为不带 BOM 的 UTF-8 / LF，防止在 Mac 上出现 CRLF 脚本问题。
+7. Windows 代码迁移后，8 个源码和脚本文件的 SHA-256 与先前交付包一致；PowerShell 构建和测试脚本语法解析通过。
 
-�Ѽ��뵫δִ��
-- XCTest��Retina �ߴ硢�Ƿ��ߴ硢����ͼ���ڴ�߽硢PNG �������������֤��
-- macOS ��Ԫ���ԡ�Swift ���ͼ�顢arm64/x86_64 ���롢ͨ�ö����ƴ����ǩ����֤��
-- ϵͳѡ��������Ļ¼����Ȩ�����ڽ�ͼ�����桢�����弰��ʽ���ڱ���ʵ�⡣
+已加入但未执行
+- XCTest：Retina 尺寸、非法尺寸、超大图像内存边界、PNG 编解码与像素验证。
+- macOS 单元测试、Swift 类型检查、arm64/x86_64 编译、通用二进制打包与签名验证。
+- 系统选择器、屏幕录制授权、窗口截图、保存、剪贴板及旧式窗口保护实测。
 
-Mac �ϵĺ�����֤
-����Ŀ��Ŀ¼ִ�У�bash macos/build.sh
-�� macos Ŀ¼ִ�У�swift test
-���� Tests/MANUAL-TESTS.txt ����ֶ����ա�
+Mac 上的后续验证
+在项目根目录执行：bash macos/build.sh
+在 macos 目录执行：swift test
+按照 Tests/MANUAL-TESTS.txt 完成手动验收。
 
-��Ϊ�߽�
-Mac �����û�ȷ�ϵġ�ֱ�ӽ�ͼ��ʵ�֣����� Windows ������ȡ���������Ƶ���ֲ��
-���뷵�ؽ�ͼ�������˹����Ԥ��������֤�����ܱ������ݿɼ���
+行为边界
+Mac 版是用户确认的“直接截图”实现，不是 Windows 进程内取消保护机制的移植。
+代码返回截图后仍需人工检查预览；不保证所有受保护内容可见。

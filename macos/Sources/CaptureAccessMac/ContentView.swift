@@ -8,8 +8,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("ѡ�񴰿ڣ�ֱ�ӽ�ͼ").font(.largeTitle.bold())
-                    Text("ѡȡĿ�괰�ں�Ԥ�������� PNG ����ͼƬ��")
+                    Text("选择窗口，直接截图").font(.largeTitle.bold())
+                    Text("选取目标窗口后预览，保存 PNG 或复制图片。")
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -19,14 +19,14 @@ struct ContentView: View {
 
             HStack(spacing: 12) {
                 Button(action: model.chooseWindow) {
-                    Label("ѡ�񴰿ڲ���ͼ", systemImage: "viewfinder")
+                    Label("选择窗口并截图", systemImage: "viewfinder")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.isBusy)
-                Button("�ٴν�ͼ", action: model.captureAgain).disabled(!model.canCaptureAgain)
-                if model.isBusy { Button("ȡ��", action: model.cancel) }
+                Button("再次截图", action: model.captureAgain).disabled(!model.canCaptureAgain)
+                if model.isBusy { Button("取消", action: model.cancel) }
                 Spacer()
-                Button("�򿪲��Դ���", action: model.openDemo).disabled(model.isBusy)
+                Button("打开测试窗口", action: model.openDemo).disabled(model.isBusy)
             }
 
             ZStack {
@@ -34,17 +34,17 @@ struct ContentView: View {
                 if let frame = model.frame {
                     Image(nsImage: frame.preview)
                         .resizable().interpolation(.high).scaledToFit().padding(16)
-                        .accessibilityLabel("���һ�δ��ڽ�ͼԤ��")
+                        .accessibilityLabel("最近一次窗口截图预览")
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "rectangle.dashed").font(.system(size: 46))
-                        Text("��ͼԤ��").font(.title3)
-                        Text("�����ѡ�񴰿ڲ���ͼ������ϵͳѡ������ȷ��һ�����ڡ�")
+                        Text("截图预览").font(.title3)
+                        Text("点击“选择窗口并截图”，在系统选择器中确认一个窗口。")
                             .font(.callout)
                     }.foregroundStyle(.secondary)
                 }
                 if model.phase == .capturing {
-                    ProgressView("���ڽ�ͼ��")
+                    ProgressView("正在截图…")
                         .padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
@@ -53,17 +53,17 @@ struct ContentView: View {
 
             if let frame = model.frame {
                 HStack {
-                    Text("\(frame.image.width) �� \(frame.image.height) ����")
+                    Text("\(frame.image.width) × \(frame.image.height) 像素")
                     Text(frame.date, style: .time)
-                    if frame.wasReduced { Text("��ߴ細���ѵȱ���С") }
+                    if frame.wasReduced { Text("大尺寸窗口已等比缩小") }
                 }.font(.caption).foregroundStyle(.secondary)
             }
 
             HStack(spacing: 12) {
-                Button(action: model.savePNG) { Label("���� PNG��", systemImage: "square.and.arrow.down") }
-                Button(action: model.copyImage) { Label("����ͼƬ", systemImage: "doc.on.doc") }
+                Button(action: model.savePNG) { Label("保存 PNG…", systemImage: "square.and.arrow.down") }
+                Button(action: model.copyImage) { Label("复制图片", systemImage: "doc.on.doc") }
                 Spacer()
-                Button("���Ԥ����ѡ��", action: model.clear)
+                Button("清除预览与选择", action: model.clear)
             }
             .disabled(model.frame == nil || model.isBusy)
 
@@ -73,22 +73,22 @@ struct ContentView: View {
             }
             if model.needsPermission {
                 HStack {
-                    Button("������Ļ¼��Ȩ��", action: model.requestPermission)
-                    Button("��ϵͳȨ������", action: model.openPermissionSettings)
+                    Button("申请屏幕录制权限", action: model.requestPermission)
+                    Button("打开系统权限设置", action: model.openPermissionSettings)
                 }
             }
             HStack {
                 if model.isBusy { ProgressView().controlSize(.small) }
                 Text(model.status).font(.callout).textSelection(.enabled)
             }
-            DisclosureGroup("������־") {
+            DisclosureGroup("操作日志") {
                 ScrollView {
-                    Text(model.logs.isEmpty ? "���޲�����¼��" : model.logs.joined(separator: "\n"))
+                    Text(model.logs.isEmpty ? "暂无操作记录。" : model.logs.joined(separator: "\n"))
                         .font(.system(.caption, design: .monospaced))
                         .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(height: 85)
             }
-            Text("������ѡ���Ĵ��ڽ�ͼ���ܱ�����Ƶ�������Կ�����ʾΪ�հס�")
+            Text("仅对你选定的窗口截图。受保护视频等内容仍可能显示为空白。")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(24)

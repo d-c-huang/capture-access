@@ -42,10 +42,10 @@ namespace CaptureAccess {
             finally { CloseHandle(process); }
         }
         internal static string Affinity(uint flag) {
-            if (flag == 0) return "δ���� (0)";
-            if (flag == 1) return "��ͼ���� (1)";
-            if (flag == 17) return "��ֹ���� (17)";
-            return "δ֪��־ (" + flag + ")";
+            if (flag == 0) return "未保护 (0)";
+            if (flag == 1) return "截图留空 (1)";
+            if (flag == 17) return "禁止捕获 (17)";
+            return "未知标志 (" + flag + ")";
         }
     }
     internal class Target {
@@ -66,7 +66,7 @@ namespace CaptureAccess {
         internal static Reply Apply(Target t, uint desired) {
             if (!Native.Identity(t.Window, t.Pid, t.Created)) return new Reply { status="window_changed", error=1400 };
             string helper = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", t.X86 ? "CaptureHelper32.exe" : "CaptureHelper64.exe");
-            if (!File.Exists(helper)) throw new FileNotFoundException("ȱ���������������ѹѹ������", helper);
+            if (!File.Exists(helper)) throw new FileNotFoundException("缺少组件，请完整解压压缩包。", helper);
             var start = new ProcessStartInfo(helper, String.Format(CultureInfo.InvariantCulture,
                 "--set {0} {1} {2} {3}", t.Window.ToInt64(), t.Pid, t.Created, desired));
             start.UseShellExecute=false; start.CreateNoWindow=true;
@@ -85,16 +85,16 @@ namespace CaptureAccess {
             }
         }
         internal static string Describe(Reply r) {
-            if (r.Ok) return "����֤��" + Native.Affinity(r.after);
+            if (r.Ok) return "已验证：" + Native.Affinity(r.after);
             string reason;
             switch(r.status) {
-                case "window_changed": case "process_changed": reason="�����ѹرջ�����ѱ仯����ˢ��"; break;
-                case "no_ack": reason="Ӧ��δִ�й��ӣ����ܲ������������"; break;
-                case "send_timeout": case "helper_timeout": reason="Ŀ�괰������Ӧ�������ʱ"; break;
-                case "load_library": reason="�������ʧ�ܣ���������ѹ�����ܹ�"; break;
-                case "architecture": case "arm64_unsupported": reason="Ŀ��ܹ�����֧��"; break;
-                case "hook": reason="���Ӱ�װʧ�ܣ�����˫������Ȩ��"; break;
-                default: reason="δ���޸Ļ���֤���ڱ���"; break;
+                case "window_changed": case "process_changed": reason="窗口已关闭或进程已变化，请刷新"; break;
+                case "no_ack": reason="应用未执行钩子，可能不允许载入组件"; break;
+                case "send_timeout": case "helper_timeout": reason="目标窗口无响应或操作超时"; break;
+                case "load_library": reason="组件加载失败，请完整解压并检查架构"; break;
+                case "architecture": case "arm64_unsupported": reason="目标架构不受支持"; break;
+                case "hook": reason="钩子安装失败，请检查双方运行权限"; break;
+                default: reason="未能修改或验证窗口保护"; break;
             }
             return reason + " [" + r.status + "; " + r.error + ": " + new Win32Exception(unchecked((int)r.error)).Message + "]";
         }
@@ -111,7 +111,7 @@ namespace CaptureAccess {
         bool busy, closing, canClose;
 
         internal MainForm() {
-            Text="��ͼ�������� �� Capture Access";
+            Text="截图保护助手 · Capture Access";
             Font=new Font("Microsoft YaHei UI", 9F); StartPosition=FormStartPosition.CenterScreen;
             AutoScaleMode=AutoScaleMode.Dpi; ClientSize=new Size(1060,740); MinimumSize=new Size(940,680);
             BackColor=Color.FromArgb(245,247,250);
@@ -120,36 +120,36 @@ namespace CaptureAccess {
             int[] heights={50,42,44,0,52,30,110,38};
             for(int i=0;i<heights.Length;i++) layout.RowStyles.Add(new RowStyle(i==3?SizeType.Percent:SizeType.Absolute,i==3?100:heights[i]));
             Controls.Add(layout);
-            var heading=new Label { Text="ѡ�񴰿ڣ������ͼ����", Font=new Font(Font.FontFamily,19,FontStyle.Bold), AutoSize=true, Dock=DockStyle.Fill };
+            var heading=new Label { Text="选择窗口，解除截图保护", Font=new Font(Font.FontFamily,19,FontStyle.Bold), AutoSize=true, Dock=DockStyle.Fill };
             layout.Controls.Add(heading,0,0);
-            layout.Controls.Add(new Label { Text="������ Windows 10 / 11 ����ͨ����Ӧ�á�ѡ��һ�к������ɰ� Ctrl ��ѡ��", AutoSize=true, Dock=DockStyle.Fill },0,1);
+            layout.Controls.Add(new Label { Text="适用于 Windows 10 / 11 的普通桌面应用。选中一行后解除；可按 Ctrl 多选。", AutoSize=true, Dock=DockStyle.Fill },0,1);
             var search=new TableLayoutPanel { Dock=DockStyle.Fill, ColumnCount=2, Margin=Padding.Empty };
             search.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,75)); search.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-            search.Controls.Add(new Label { Text="ɸѡ����", AutoSize=true, Anchor=AnchorStyles.Left },0,0);
+            search.Controls.Add(new Label { Text="筛选窗口", AutoSize=true, Anchor=AnchorStyles.Left },0,0);
             filter.Dock=DockStyle.Fill; filter.Margin=new Padding(0,4,0,8); search.Controls.Add(filter,1,0); layout.Controls.Add(search,0,2);
             windows.Dock=DockStyle.Fill; windows.View=View.Details; windows.FullRowSelect=true; windows.HideSelection=false;
             windows.MultiSelect=true; windows.BorderStyle=BorderStyle.FixedSingle; windows.GridLines=false;
-            windows.Columns.Add("Ӧ��",145); windows.Columns.Add("PID / �ܹ�",100); windows.Columns.Add("���ڱ���",380);
-            windows.Columns.Add("��ͼ���� / ״̬",340); layout.Controls.Add(windows,0,3);
+            windows.Columns.Add("应用",145); windows.Columns.Add("PID / 架构",100); windows.Columns.Add("窗口标题",380);
+            windows.Columns.Add("截图保护 / 状态",340); layout.Controls.Add(windows,0,3);
             var buttons=new FlowLayoutPanel { Dock=DockStyle.Fill, WrapContents=false, Padding=new Padding(0,10,0,0) };
-            MakeButton(refresh,"ˢ�´���",100); MakeButton(apply,"���ѡ�д���",140); MakeButton(restore,"�ָ�ԭ����",125);
-            MakeButton(elevate,"�Թ���Ա����",140); MakeButton(demo,"�򿪲��Դ���",140);
+            MakeButton(refresh,"刷新窗口",100); MakeButton(apply,"解除选中窗口",140); MakeButton(restore,"恢复原设置",125);
+            MakeButton(elevate,"以管理员重启",140); MakeButton(demo,"打开测试窗口",140);
             apply.BackColor=Color.FromArgb(25,99,218); apply.ForeColor=Color.White; apply.FlatStyle=FlatStyle.Flat;
             buttons.Controls.AddRange(new Control[]{refresh,apply,restore,elevate,demo}); layout.Controls.Add(buttons,0,4);
-            maintain.Text="���������ÿ������ѡ��Ĵ��ڣ������˳�ʱ�Զ��ָ�ԭ���ã�";
+            maintain.Text="持续解除（每秒检查已选择的窗口；正常退出时自动恢复原设置）";
             maintain.AutoSize=true; maintain.Checked=true; maintain.Dock=DockStyle.Fill; layout.Controls.Add(maintain,0,5);
             log.Dock=DockStyle.Fill; log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
             log.BackColor=Color.White; layout.Controls.Add(log,0,6);
-            summary.Text="���� �� ��֧�� ARM64��DRM ��Ƶ��ܾ����ع��ӵ��ܱ������̡�";
+            summary.Text="就绪 · 不支持 ARM64、DRM 视频或拒绝加载钩子的受保护进程。";
             summary.Dock=DockStyle.Fill; summary.Padding=new Padding(0,10,0,0); layout.Controls.Add(summary,0,7);
             refresh.Click+=(s,e)=>RefreshWindows(); filter.TextChanged+=(s,e)=>RenderWindows();
             apply.Click+=async(s,e)=>await ApplySelected(); restore.Click+=async(s,e)=>await RestoreAll();
             elevate.Click+=async(s,e)=>await Elevate(); demo.Click+=(s,e)=>OpenDemo();
             timer.Interval=1000; timer.Tick+=async(s,e)=>await Maintain(); timer.Start();
             FormClosing+=OnClosing;
-            Shown+=(s,e)=> { RefreshWindows(); Log("��������ȷѡ�еĴ��ڣ��л�ɸѡ��ˢ�²����Զ��޸��������ڡ�"); };
+            Shown+=(s,e)=> { RefreshWindows(); Log("仅处理明确选中的窗口；切换筛选或刷新不会自动修改其他窗口。"); };
             bool admin=new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
-            if(admin) { Text+="������Ա��"; elevate.Enabled=false; }
+            if(admin) { Text+="（管理员）"; elevate.Enabled=false; }
         }
         void MakeButton(Button b,string text,int width) { b.Text=text; b.Width=width; b.Height=33; b.Margin=new Padding(0,0,8,0); }
         void Log(string message) { log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+message+Environment.NewLine); }
@@ -179,15 +179,15 @@ namespace CaptureAccess {
                 found.Add(target); return true;
             },IntPtr.Zero);
             all=found.OrderBy(t=>t.Name,StringComparer.CurrentCultureIgnoreCase).ThenBy(t=>t.Title).ToList(); RenderWindows();
-            summary.Text=String.Format("�ҵ� {0} ������ �� �Ѽ�¼ {1} �����ڵ�ԭ����",all.Count,watches.Count);
+            summary.Text=String.Format("找到 {0} 个窗口 · 已记录 {1} 个窗口的原设置",all.Count,watches.Count);
         }
         void RenderWindows() {
             var selected=new HashSet<string>(windows.SelectedItems.Cast<ListViewItem>().Select(i=>((Target)i.Tag).Key));
             windows.BeginUpdate(); windows.Items.Clear(); string query=filter.Text.Trim();
             foreach(Target t in all) {
                 if(query.Length>0 && (t.Name+" "+t.Title+" "+t.Pid).IndexOf(query,StringComparison.CurrentCultureIgnoreCase)<0) continue;
-                uint affinity; string state=Native.GetWindowDisplayAffinity(t.Window,out affinity)?Native.Affinity(affinity):"�޷���ȡ���������ѱ�����";
-                if(!t.CanAccess) state="�޷���ȡ������Ϣ";
+                uint affinity; string state=Native.GetWindowDisplayAffinity(t.Window,out affinity)?Native.Affinity(affinity):"无法读取（不代表已保护）";
+                if(!t.CanAccess) state="无法读取进程信息";
                 var item=new ListViewItem(new[]{t.Name,t.Pid+" / "+(t.CanAccess?(t.X86?"x86":"x64"):"?"),t.Title,state});
                 item.Tag=t; t.Item=item; item.Selected=selected.Contains(t.Key); windows.Items.Add(item);
             }
@@ -199,20 +199,20 @@ namespace CaptureAccess {
         async Task ApplySelected() {
             if(busy) return;
             var targets=windows.SelectedItems.Cast<ListViewItem>().Select(i=>(Target)i.Tag).ToList();
-            if(targets.Count==0) { summary.Text="�������б���ѡ��Ŀ�괰�ڡ�"; return; }
-            if(Native.Architecture==12) { summary.Text="�˰汾��֧�� ARM64 Windows��"; return; }
+            if(targets.Count==0) { summary.Text="请先在列表中选择目标窗口。"; return; }
+            if(Native.Architecture==12) { summary.Text="此版本不支持 ARM64 Windows。"; return; }
             SetBusy(true);
             try {
                 foreach(Target t in targets) {
-                    if(!t.CanAccess) { Log(t.Name+"���޷���ȡ������Ϣ���ɳ����Թ���Ա�������ߡ�"); continue; }
+                    if(!t.CanAccess) { Log(t.Name+"：无法读取进程信息，可尝试以管理员重启工具。"); continue; }
                     Reply r=await Task.Run(()=>Engine.Apply(t,0));
                     // Save the original even when setting succeeded but verification failed.
                     if(r.ack==1 && r.known==1 && (r.Ok || r.changed==1) && !watches.ContainsKey(t.Key))
                         watches.Add(t.Key,new Watch { Target=t,Original=r.before });
-                    Row(t,r.Ok?"�ѽ�� �� ��ǰ 0":Engine.Describe(r)); Log(t.Name+" / "+t.Title+"��"+Engine.Describe(r));
+                    Row(t,r.Ok?"已解除 · 当前 0":Engine.Describe(r)); Log(t.Name+" / "+t.Title+"："+Engine.Describe(r));
                 }
-                summary.Text="������� �� �Ѽ�¼ "+watches.Count+" �����ڣ��ɽ�ͼ��飬�������ָ�ԭ���á���";
-            } catch(Exception e) { Log("����ʧ�ܣ�"+e.Message); summary.Text="����δ��ɣ���鿴��־��"; }
+                summary.Text="操作完成 · 已记录 "+watches.Count+" 个窗口；可截图检查，或点击“恢复原设置”。";
+            } catch(Exception e) { Log("操作失败："+e.Message); summary.Text="操作未完成，请查看日志。"; }
             finally { SetBusy(false); }
         }
         async Task Maintain() {
@@ -221,14 +221,14 @@ namespace CaptureAccess {
             try {
                 foreach(Watch w in watches.Values.ToList()) {
                     Target t=w.Target;
-                    if(!Native.Identity(t.Window,t.Pid,t.Created)) { watches.Remove(t.Key); Row(t,"�����ѹرջ�仯"); continue; }
+                    if(!Native.Identity(t.Window,t.Pid,t.Created)) { watches.Remove(t.Key); Row(t,"窗口已关闭或变化"); continue; }
                     uint current;
                     if(Native.GetWindowDisplayAffinity(t.Window,out current) && current==0) continue;
                     Reply r=await Task.Run(()=>Engine.Apply(t,0));
-                    Row(t,r.Ok?"������� �� ��ǰ 0":Engine.Describe(r));
-                    if(!r.Ok) { Log(t.Name+"�����������ͣ��"+Engine.Describe(r)); maintain.Checked=false; break; }
+                    Row(t,r.Ok?"持续解除 · 当前 0":Engine.Describe(r));
+                    if(!r.Ok) { Log(t.Name+"：持续解除暂停。"+Engine.Describe(r)); maintain.Checked=false; break; }
                 }
-            } catch(Exception e) { Log("���������ͣ��"+e.Message); maintain.Checked=false; }
+            } catch(Exception e) { Log("持续解除暂停："+e.Message); maintain.Checked=false; }
             finally { SetBusy(false); }
         }
         async Task<bool> RestoreAll() {
@@ -239,12 +239,12 @@ namespace CaptureAccess {
                     Target t=w.Target;
                     if(!Native.Identity(t.Window,t.Pid,t.Created)) { watches.Remove(t.Key); continue; }
                     Reply r=await Task.Run(()=>Engine.Apply(t,w.Original));
-                    Row(t,r.Ok?"�ѻָ� �� "+Native.Affinity(r.after):Engine.Describe(r));
-                    Log(t.Name+"���ָ�ԭ���á�"+Engine.Describe(r));
+                    Row(t,r.Ok?"已恢复 · "+Native.Affinity(r.after):Engine.Describe(r));
+                    Log(t.Name+"：恢复原设置。"+Engine.Describe(r));
                     if(r.Ok) watches.Remove(t.Key); else ok=false;
                 }
-                summary.Text=ok?"�ѻָ������Դ��ڴ��ڵ�ԭ���á�":"���ִ���δ�ָ�����鿴��־�������³��Ի�����Ŀ��Ӧ�á�";
-            } catch(Exception e) { ok=false; Log("�ָ�ʧ�ܣ�"+e.Message); }
+                summary.Text=ok?"已恢复所有仍存在窗口的原设置。":"部分窗口未恢复，请查看日志；可重新尝试或重启目标应用。";
+            } catch(Exception e) { ok=false; Log("恢复失败："+e.Message); }
             finally { SetBusy(false); }
             return ok;
         }
@@ -256,7 +256,7 @@ namespace CaptureAccess {
             while(busy) await Task.Delay(100);
             if(watches.Count>0 && !await RestoreAll()) {
                 closing=false; timer.Start();
-                MessageBox.Show(this,"���ִ���δ�ָܻ�ԭ���á���鿴��־�����ԣ�Ҳ�����ȹر�Ŀ��Ӧ�ã����˳������ߡ�", "�ָ���δ���",MessageBoxButtons.OK,MessageBoxIcon.Information);
+                MessageBox.Show(this,"部分窗口未能恢复原设置。请查看日志并重试；也可以先关闭目标应用，再退出本工具。", "恢复尚未完成",MessageBoxButtons.OK,MessageBoxIcon.Information);
                 return;
             }
             canClose=true; Close();
@@ -267,14 +267,14 @@ namespace CaptureAccess {
             try {
                 Process.Start(new ProcessStartInfo(Application.ExecutablePath) { UseShellExecute=true,Verb="runas",WorkingDirectory=AppDomain.CurrentDomain.BaseDirectory });
                 canClose=true; Close();
-            } catch(Win32Exception e) { Log("����Ա����δ��ɣ�"+e.Message); }
+            } catch(Win32Exception e) { Log("管理员重启未完成："+e.Message); }
         }
         void OpenDemo() {
             try {
                 string name=Native.Architecture==0?"Demo32.exe":"Demo64.exe";
                 Process.Start(new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"tests",name)) { UseShellExecute=false });
-                Log("�Ѵ򿪲��Դ��ڡ������ˢ�´��ڡ���ѡ�� CaptureAccess test���ٽ��������");
-            } catch(Exception e) { Log("�޷��򿪲��Դ��ڣ�"+e.Message); }
+                Log("已打开测试窗口。点击“刷新窗口”，选择 CaptureAccess test，再解除保护。");
+            } catch(Exception e) { Log("无法打开测试窗口："+e.Message); }
         }
     }
     static class Program {

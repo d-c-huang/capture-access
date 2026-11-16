@@ -9,25 +9,25 @@ struct CaptureAccessApp: App {
     @StateObject private var model = CaptureModel()
 
     var body: some Scene {
-        WindowGroup("Capture Access �� ���ڽ�ͼ") {
+        WindowGroup("Capture Access · 窗口截图") {
             ContentView(model: model)
                 .frame(minWidth: 820, minHeight: 640)
         }
         .defaultSize(width: 1040, height: 780)
         .commands {
             CommandGroup(replacing: .newItem) {}
-            CommandMenu("��ͼ") {
-                Button("ѡ�񴰿ڲ���ͼ") { model.chooseWindow() }
+            CommandMenu("截图") {
+                Button("选择窗口并截图") { model.chooseWindow() }
                     .keyboardShortcut("1", modifiers: [.command, .shift])
                     .disabled(model.isBusy)
-                Button("�ٴν�ͼ") { model.captureAgain() }
+                Button("再次截图") { model.captureAgain() }
                     .keyboardShortcut("2", modifiers: [.command, .shift])
                     .disabled(!model.canCaptureAgain)
                 Divider()
-                Button("���� PNG��") { model.savePNG() }
+                Button("保存 PNG…") { model.savePNG() }
                     .keyboardShortcut("s", modifiers: .command)
                     .disabled(model.frame == nil || model.isBusy)
-                Button("����ͼƬ") { model.copyImage() }
+                Button("复制图片") { model.copyImage() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
                     .disabled(model.frame == nil || model.isBusy)
             }

@@ -15,7 +15,7 @@
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>�������ѡ���ȡĿ�괰�ڵĽ�ͼ�����ڱ���Ԥ�������� PNG ����ͼƬ��</string>
+    <string>根据你的选择获取目标窗口的截图，用于本机预览、保存 PNG 或复制图片。</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>
 </plist>

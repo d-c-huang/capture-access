@@ -21,7 +21,7 @@ final class CaptureModel: NSObject, ObservableObject {
 
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var frame: CapturedFrame?
-    @Published private(set) var status = "ѡ��һ�����ڣ���ʼ��ͼ��"
+    @Published private(set) var status = "选择一个窗口，开始截图。"
     @Published private(set) var lastError: String?
     @Published private(set) var hasSelection = false
     @Published private(set) var needsPermission = false
@@ -61,7 +61,7 @@ final class CaptureModel: NSObject, ObservableObject {
         lastError = nil
         needsPermission = false
         phase = .choosing
-        status = "����ϵͳѡ������ѡ��Ҫ��ͼ�Ĵ��ڡ�"
+        status = "请在系统选择器中选择要截图的窗口。"
         picker.isActive = true
         picker.present(using: .window)
     }
@@ -84,7 +84,7 @@ final class CaptureModel: NSObject, ObservableObject {
         detachObserver()
         phase = .idle
         lastError = nil
-        status = "Ԥ���ʹ���ѡ���������"
+        status = "预览和窗口选择已清除。"
         // Deliberately leave any previously copied image in the user's clipboard.
     }
 
@@ -92,7 +92,7 @@ final class CaptureModel: NSObject, ObservableObject {
         let previous = frame
         clear()
         frame = previous
-        status = "��ȡ��������ԭ��Ԥ��������"
+        status = "已取消操作，原有预览保留。"
     }
 
     fileprivate func accept(_ filter: SCContentFilter, selectionID: UUID) {
@@ -109,7 +109,7 @@ final class CaptureModel: NSObject, ObservableObject {
         operationID = currentID
         phase = .capturing
         lastError = nil
-        status = "���ڻ�ȡ��ѡ���ڡ�"
+        status = "正在获取所选窗口…"
 
         timeoutTask = Task { [weak self] in
             do { try await Task.sleep(nanoseconds: 15_000_000_000) }
@@ -117,7 +117,7 @@ final class CaptureModel: NSObject, ObservableObject {
             guard let self, self.operationID == currentID, self.phase == .capturing else { return }
             self.operationID = UUID()
             self.captureTask?.cancel()
-            self.fail("��ͼ��ʱ����ȷ��Ŀ�괰���Կɼ���Ȼ������ѡ��")
+            self.fail("截图超时。请确认目标窗口仍可见，然后重新选择。")
         }
 
         captureTask = Task { [weak self] in
@@ -139,7 +139,7 @@ final class CaptureModel: NSObject, ObservableObject {
                 self.frame = CapturedFrame(image: image, date: Date(), wasReduced: size.wasReduced)
                 self.phase = .idle
                 self.needsPermission = false
-                self.status = "��ͼ��� �� \(image.width) �� \(image.height) ����"
+                self.status = "截图完成 · \(image.width) × \(image.height) 像素"
                 self.appendLog(self.status)
             } catch {
                 guard self.operationID == currentID, !Task.isCancelled else { return }
@@ -147,8 +147,8 @@ final class CaptureModel: NSObject, ObservableObject {
                 let native = error as NSError
                 self.needsPermission = native.code == -3801 || !CGPreflightScreenCaptureAccess()
                 let explanation = self.needsPermission
-                    ? "��Ҫ��Ļ¼����Ȩ����ʹ���·�����Ȩ��ť����ϵͳ���������� Capture Access�������������Ӧ�á�"
-                    : "δ�ܽ�ͼ����ȷ�ϴ����Կɼ���Ŀ������Ҳ���ܲ���������"
+                    ? "需要屏幕录制授权。请使用下方的授权按钮，或到系统设置中允许 Capture Access，随后重新启动应用。"
+                    : "未能截图。请确认窗口仍可见；目标内容也可能不允许捕获。"
                 self.fail("\(explanation)\n\(native.localizedDescription) [\(native.domain): \(native.code)]")
             }
         }
@@ -161,7 +161,7 @@ final class CaptureModel: NSObject, ObservableObject {
         picker.isActive = false
         detachObserver()
         lastError = message
-        status = "��ͼδ��ɣ�ԭ��Ԥ��������"
+        status = "截图未完成；原有预览保留。"
         appendLog(message)
     }
 
@@ -177,10 +177,10 @@ final class CaptureModel: NSObject, ObservableObject {
                 let data = try PNGExport.encode(frame.image)
                 try data.write(to: url, options: .atomic)
                 self.lastError = nil
-                self.status = "�ѱ��棺\(url.lastPathComponent)"
+                self.status = "已保存：\(url.lastPathComponent)"
                 self.appendLog(self.status)
             } catch {
-                self.lastError = "����ʧ�ܣ�\(error.localizedDescription)"
+                self.lastError = "保存失败：\(error.localizedDescription)"
                 self.appendLog(self.lastError!)
             }
         }
@@ -197,10 +197,10 @@ final class CaptureModel: NSObject, ObservableObject {
         clipboard.clearContents()
         if clipboard.writeObjects([frame.preview]) {
             lastError = nil
-            status = "ͼƬ�Ѹ��Ƶ������塣"
+            status = "图片已复制到剪贴板。"
             appendLog(status)
         } else {
-            lastError = "δ��д������壬�����Ի򱣴� PNG��"
+            lastError = "未能写入剪贴板，请重试或保存 PNG。"
         }
     }
 
@@ -208,7 +208,7 @@ final class CaptureModel: NSObject, ObservableObject {
         let granted = CGRequestScreenCaptureAccess()
         needsPermission = !granted
         if granted { lastError = nil }
-        status = granted ? "ϵͳ����Ȩ��������ѡ�񴰿ڽ�ͼ��" : "�밴ϵͳ��ʾ��Ȩ����Ȩ�������Ҫ��������Ӧ�á�"
+        status = granted ? "系统已授权，请重新选择窗口截图。" : "请按系统提示授权；授权后可能需要重新启动应用。"
         appendLog(status)
     }
 
@@ -220,10 +220,10 @@ final class CaptureModel: NSObject, ObservableObject {
     func openDemo() {
         guard let url = Bundle.main.url(forResource: "CaptureAccessDemo", withExtension: "app"),
               NSWorkspace.shared.open(url) else {
-            lastError = "δ�ҵ���ʾӦ�ã���ʹ�� build.sh ���������� .app �����ԡ�"
+            lastError = "未找到演示应用，请使用 build.sh 生成完整的 .app 后再试。"
             return
         }
-        appendLog("�Ѵ򿪲��Դ��ڡ�����ϵͳѡ������ѡ�� Capture Access Demo��")
+        appendLog("已打开测试窗口。请在系统选择器中选择 Capture Access Demo。")
     }
 
     private func appendLog(_ message: String) {
@@ -244,12 +244,12 @@ final class CaptureModel: NSObject, ObservableObject {
         hasSelection = false
         picker.isActive = false
         detachObserver()
-        status = "����ѡ����ȡ���������ԭ��Ԥ��������"
+        status = "窗口选择已取消或结束，原有预览保留。"
     }
 
     fileprivate func selectionFailed(_ error: Error, selectionID: UUID) {
         guard observer?.selectionID == selectionID, phase == .choosing else { return }
-        fail("ϵͳ����ѡ�����޷�������\(error.localizedDescription)")
+        fail("系统窗口选择器无法启动：\(error.localizedDescription)")
     }
 }
 

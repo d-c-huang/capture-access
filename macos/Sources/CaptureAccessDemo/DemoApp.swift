@@ -24,15 +24,15 @@ final class DemoDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.sharingType = .none
 
-        let heading = NSTextField(labelWithString: "Capture Access ���Դ���")
+        let heading = NSTextField(labelWithString: "Capture Access 测试窗口")
         heading.font = .boldSystemFont(ofSize: 25)
         let description = NSTextField(wrappingLabelWithString:
-            "���ڽ�ͼ���ֵ�ϵͳѡ������ѡ��˴��ڡ�\n\n�˴��ڿ������þ�ʽ�����������°� macOS �Ľ�ͼ�ӿ��Կ��ܲ���������������Ҫ��ʵ����ȷ�ϵ���Ϊ��")
+            "请在截图助手的系统选择器中选择此窗口。\n\n此窗口可以设置旧式分享保护。新版 macOS 的截图接口仍可能捕获它；这正是需要在实机上确认的行为。")
         description.font = .systemFont(ofSize: 15)
-        let toggle = NSButton(checkboxWithTitle: "���þ�ʽ���ڱ�����sharingType = none��",
+        let toggle = NSButton(checkboxWithTitle: "设置旧式窗口保护（sharingType = none）",
                               target: self, action: #selector(toggleProtection(_:)))
         toggle.state = .on
-        stateLabel.stringValue = "��ǰ����ʽ���������á�"
+        stateLabel.stringValue = "当前：旧式保护已设置。"
         let stack = NSStackView(views: [heading, description, toggle, stateLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -51,7 +51,7 @@ final class DemoDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleProtection(_ sender: NSButton) {
         window.sharingType = sender.state == .on ? .none : .readOnly
-        stateLabel.stringValue = sender.state == .on ? "��ǰ����ʽ���������á�" : "��ǰ��������ʽ������ȡ��"
+        stateLabel.stringValue = sender.state == .on ? "当前：旧式保护已设置。" : "当前：允许旧式分享读取。"
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
