@@ -35,36 +35,61 @@ esac
 
 MAIN_BINARIES=()
 DEMO_BINARIES=()
+BRIDGE_BINARIES=()
 for TARGET_ARCH in "${ARCHES[@]}"; do
-    swift build --package-path "$ROOT" --configuration release --arch "$TARGET_ARCH"
-    BIN_DIR="$(swift build --package-path "$ROOT" --configuration release --arch "$TARGET_ARCH" --show-bin-path)"
+    # Newer Swift build engines share a product path across architectures.
+    # Keep each build separate so the next architecture cannot overwrite it.
+    BUILD_DIR="$ROOT/.build/architectures/$TARGET_ARCH"
+    swift build --package-path "$ROOT" --scratch-path "$BUILD_DIR" --configuration release --arch "$TARGET_ARCH"
+    BIN_DIR="$(swift build --package-path "$ROOT" --scratch-path "$BUILD_DIR" --configuration release --arch "$TARGET_ARCH" --show-bin-path)"
     MAIN_BINARIES+=("$BIN_DIR/CaptureAccess")
     DEMO_BINARIES+=("$BIN_DIR/CaptureAccessDemo")
+    BRIDGE_BINARIES+=("$BIN_DIR/CaptureAccessPageBridge")
 done
 
 APP="$ROOT/dist/CaptureAccess.app"
 DEMO="$APP/Contents/Resources/CaptureAccessDemo.app"
-mkdir -p "$APP/Contents/MacOS" "$DEMO/Contents/MacOS"
+BRIDGE="$APP/Contents/Helpers/CaptureAccessPageBridge"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$DEMO/Contents/MacOS"
 if [[ "$ARCH" == "universal" ]]; then
     xcrun lipo -create "${MAIN_BINARIES[@]}" -output "$APP/Contents/MacOS/CaptureAccess"
     xcrun lipo -create "${DEMO_BINARIES[@]}" -output "$DEMO/Contents/MacOS/CaptureAccessDemo"
+    xcrun lipo -create "${BRIDGE_BINARIES[@]}" -output "$BRIDGE"
 else
     cp "${MAIN_BINARIES[0]}" "$APP/Contents/MacOS/CaptureAccess"
     cp "${DEMO_BINARIES[0]}" "$DEMO/Contents/MacOS/CaptureAccessDemo"
+    cp "${BRIDGE_BINARIES[0]}" "$BRIDGE"
 fi
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/LICENSE.txt" "$APP/Contents/Resources/LICENSE.txt"
 cp "$ROOT/Resources/Demo-Info.plist" "$DEMO/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 printf 'APPL????' > "$DEMO/Contents/PkgInfo"
-chmod +x "$APP/Contents/MacOS/CaptureAccess" "$DEMO/Contents/MacOS/CaptureAccessDemo"
+chmod +x "$APP/Contents/MacOS/CaptureAccess" "$DEMO/Contents/MacOS/CaptureAccessDemo" "$BRIDGE"
 plutil -lint "$APP/Contents/Info.plist" "$DEMO/Contents/Info.plist"
 
-# Sign the nested bundle first; local ad-hoc signing requires no developer account.
-SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+# Prefer a stable local development identity: ad-hoc signatures change their
+# designated requirement after a rebuild and invalidate screen capture consent.
+SIGN_IDENTITY="${SIGN_IDENTITY:-auto}"
+if [[ "$SIGN_IDENTITY" == "auto" ]]; then
+    IDENTITIES=()
+    while IFS= read -r identity; do
+        [[ -n "$identity" ]] && IDENTITIES+=("$identity")
+    done < <(security find-identity -v -p codesigning | awk '/"Apple Development:/ { print $2 }')
+    if [[ ${#IDENTITIES[@]} -eq 1 ]]; then
+        SIGN_IDENTITY="${IDENTITIES[0]}"
+    else
+        SIGN_IDENTITY="-"
+        printf 'No unique Apple Development identity found; using ad-hoc signing. Screen capture consent may need to be renewed after rebuilding.\n' >&2
+    fi
+fi
+# Sign the nested bundle first.
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
+    codesign --force --sign - --timestamp=none "$BRIDGE"
     codesign --force --sign - --timestamp=none "$DEMO"
     codesign --force --sign - --timestamp=none "$APP"
 else
+    codesign --force --sign "$SIGN_IDENTITY" --options runtime --timestamp "$BRIDGE"
     codesign --force --sign "$SIGN_IDENTITY" --options runtime --timestamp "$DEMO"
     codesign --force --sign "$SIGN_IDENTITY" --options runtime --timestamp "$APP"
 fi

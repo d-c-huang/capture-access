@@ -4,11 +4,19 @@ import Foundation
 public enum CaptureFailure: LocalizedError {
     case invalidSize
     case pngEncoding
+    case imageValidation
+    case emptyImage
+    case targetNotFrontmost
+    case protectedWindow
 
     public var errorDescription: String? {
         switch self {
         case .invalidSize: return "窗口尺寸无效。请确认窗口仍可见，然后重新选择。"
         case .pngEncoding: return "无法编码 PNG 图片，请重新截图。"
+        case .imageValidation: return "无法检查截图内容，请重新截图。"
+        case .emptyImage: return "系统返回了全透明图片，未获取到窗口内容。请确认窗口仍可见；目标应用或系统可能限制了捕获。"
+        case .targetNotFrontmost: return "未能把目标窗口置于前台。请将目标窗口显示在屏幕上，再尝试截图。"
+        case .protectedWindow: return "目标应用启用了窗口防截屏。屏幕区域截图会遗漏它或返回背后的窗口，因此本次未生成图片。"
         }
     }
 }

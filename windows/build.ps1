@@ -29,6 +29,7 @@ foreach ($arch in @('x86','x64')) {
     if ($LASTEXITCODE -ne 0) { throw "Native compilation failed: $arch" }
 }
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe'
-& $csc /nologo /target:winexe /platform:anycpu /optimize+ /utf8output "/win32manifest:$PSScriptRoot\src\app.manifest" "/out:$taskOutput\CaptureAccess.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Core.dll /reference:System.Web.Extensions.dll "$PSScriptRoot\src\App.cs"
+& $csc /nologo /target:winexe /platform:anycpu /optimize+ /utf8output "/win32manifest:$PSScriptRoot\src\app.manifest" "/out:$taskOutput\CaptureAccess.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Core.dll /reference:System.Web.Extensions.dll "$PSScriptRoot\src\App.cs" "$PSScriptRoot\src\Updates.cs" "$PSScriptRoot\src\WindowsStartup.cs" "$PSScriptRoot\src\SettingsForm.cs"
 if ($LASTEXITCODE -ne 0) { throw 'GUI compilation failed.' }
+Copy-Item (Join-Path $PSScriptRoot 'README.txt') (Join-Path $taskOutput 'README.txt') -Force
 Write-Output "Build complete: $taskOutput"

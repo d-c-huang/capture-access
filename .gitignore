@@ -4,3 +4,27 @@
 /macos/.swiftpm/
 /macos/dist/
 .DS_Store
+
+# Local diagnostics, private captures, credentials, and signing material.
+*.local.txt
+*.local.json
+.env
+.env.*
+*.log
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+*.cer
+*.dSYM/
+/macos/Tools/
+/private/
+/screenshots/
+/captures/
+/release-artifacts/
+*.png
+*.jpg
+*.jpeg
+*.heic
+*.zip
+__pycache__/

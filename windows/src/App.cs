@@ -7,11 +7,17 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Reflection;
+using System.Threading;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
+
+[assembly: AssemblyVersion("0.8.0.0")]
+[assembly: AssemblyFileVersion("0.8.0.0")]
+[assembly: AssemblyProduct("Capture Access")]
 
 namespace CaptureAccess {
     internal static class Native {
@@ -105,53 +111,152 @@ namespace CaptureAccess {
         readonly Label summary = new Label();
         readonly Button refresh = new Button(), apply = new Button(), restore = new Button(), elevate = new Button(), demo = new Button();
         readonly CheckBox maintain = new CheckBox();
-        readonly Timer timer = new Timer();
+        readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         readonly Dictionary<string, Watch> watches = new Dictionary<string, Watch>();
         List<Target> all = new List<Target>();
         bool busy, closing, canClose;
+        readonly Button checkUpdate=new Button(), downloadUpdate=new Button(), settings=new Button();
+        readonly Label updateSummary=new Label();
+        readonly CancellationTokenSource updateLifetime=new CancellationTokenSource();
+        internal readonly UpdatePreferences UpdateOptions=UpdatePreferences.LoadDefault();
+        internal bool IsCheckingUpdates;
+        internal UpdateRelease AvailableUpdate;
+        internal string UpdateStatus="当前版本 v"+GitHubUpdates.CurrentVersion+" · 可检查 GitHub 更新";
+        internal event Action UpdateStateChanged;
+        SettingsForm settingsWindow;
 
         internal MainForm() {
-            Text="截图保护助手 · Capture Access";
-            Font=new Font("Microsoft YaHei UI", 9F); StartPosition=FormStartPosition.CenterScreen;
-            AutoScaleMode=AutoScaleMode.Dpi; ClientSize=new Size(1060,740); MinimumSize=new Size(940,680);
-            BackColor=Color.FromArgb(245,247,250);
-            var layout=new TableLayoutPanel { Dock=DockStyle.Fill, Padding=new Padding(20), ColumnCount=1, RowCount=8 };
+            Text="Capture Access · 窗口截图保护助手";
+            Font=new Font("Microsoft YaHei UI",9F); StartPosition=FormStartPosition.CenterScreen;
+            AutoScaleDimensions=new SizeF(96F,96F); AutoScaleMode=AutoScaleMode.Dpi; ClientSize=new Size(1100,820); MinimumSize=new Size(980,740);
+            BackColor=Color.FromArgb(246,247,249);
+            var layout=new TableLayoutPanel { Dock=DockStyle.Fill,Padding=new Padding(24),ColumnCount=1,RowCount=8 };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-            int[] heights={50,42,44,0,52,30,110,38};
-            for(int i=0;i<heights.Length;i++) layout.RowStyles.Add(new RowStyle(i==3?SizeType.Percent:SizeType.Absolute,i==3?100:heights[i]));
+            int[] heights={88,44,0,56,32,66,112,32};
+            for(int i=0;i<heights.Length;i++) layout.RowStyles.Add(new RowStyle(i==2?SizeType.Percent:SizeType.Absolute,i==2?100:heights[i]));
             Controls.Add(layout);
-            var heading=new Label { Text="选择窗口，解除截图保护", Font=new Font(Font.FontFamily,19,FontStyle.Bold), AutoSize=true, Dock=DockStyle.Fill };
-            layout.Controls.Add(heading,0,0);
-            layout.Controls.Add(new Label { Text="适用于 Windows 10 / 11 的普通桌面应用。选中一行后解除；可按 Ctrl 多选。", AutoSize=true, Dock=DockStyle.Fill },0,1);
-            var search=new TableLayoutPanel { Dock=DockStyle.Fill, ColumnCount=2, Margin=Padding.Empty };
-            search.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,75)); search.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-            search.Controls.Add(new Label { Text="筛选窗口", AutoSize=true, Anchor=AnchorStyles.Left },0,0);
-            filter.Dock=DockStyle.Fill; filter.Margin=new Padding(0,4,0,8); search.Controls.Add(filter,1,0); layout.Controls.Add(search,0,2);
+
+            var header=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=2,RowCount=2,Margin=Padding.Empty };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100)); header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,112));
+            header.RowStyles.Add(new RowStyle(SizeType.Absolute,43)); header.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            header.Controls.Add(new Label { Text="Capture Access",Font=new Font(Font.FontFamily,23,FontStyle.Bold),Dock=DockStyle.Fill,AutoSize=true },0,0);
+            header.Controls.Add(new Label { Text="选择窗口，处理截图保护。随后使用系统截图或你常用的截图工具。",ForeColor=Color.FromArgb(90,96,105),Dock=DockStyle.Fill,AutoSize=true },0,1);
+            MakeButton(settings,"设置",102); settings.Anchor=AnchorStyles.Right|AnchorStyles.Top;
+            header.Controls.Add(settings,1,0); layout.Controls.Add(header,0,0);
+
+            var search=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=2,Margin=Padding.Empty };
+            search.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,78)); search.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+            search.Controls.Add(new Label { Text="筛选窗口",AutoSize=true,Anchor=AnchorStyles.Left },0,0);
+            filter.Dock=DockStyle.Fill; filter.Margin=new Padding(0,5,0,8); search.Controls.Add(filter,1,0); layout.Controls.Add(search,0,1);
+
+            var windowCard=new GroupBox { Text="应用窗口 · 按 Ctrl 可多选",Dock=DockStyle.Fill,Padding=new Padding(12),BackColor=Color.White,Margin=Padding.Empty };
             windows.Dock=DockStyle.Fill; windows.View=View.Details; windows.FullRowSelect=true; windows.HideSelection=false;
-            windows.MultiSelect=true; windows.BorderStyle=BorderStyle.FixedSingle; windows.GridLines=false;
-            windows.Columns.Add("应用",145); windows.Columns.Add("PID / 架构",100); windows.Columns.Add("窗口标题",380);
-            windows.Columns.Add("截图保护 / 状态",340); layout.Controls.Add(windows,0,3);
-            var buttons=new FlowLayoutPanel { Dock=DockStyle.Fill, WrapContents=false, Padding=new Padding(0,10,0,0) };
-            MakeButton(refresh,"刷新窗口",100); MakeButton(apply,"解除选中窗口",140); MakeButton(restore,"恢复原设置",125);
-            MakeButton(elevate,"以管理员重启",140); MakeButton(demo,"打开测试窗口",140);
-            apply.BackColor=Color.FromArgb(25,99,218); apply.ForeColor=Color.White; apply.FlatStyle=FlatStyle.Flat;
-            buttons.Controls.AddRange(new Control[]{refresh,apply,restore,elevate,demo}); layout.Controls.Add(buttons,0,4);
-            maintain.Text="持续解除（每秒检查已选择的窗口；正常退出时自动恢复原设置）";
-            maintain.AutoSize=true; maintain.Checked=true; maintain.Dock=DockStyle.Fill; layout.Controls.Add(maintain,0,5);
+            windows.MultiSelect=true; windows.BorderStyle=BorderStyle.None; windows.GridLines=false; windows.BackColor=Color.White;
+            windows.Columns.Add("应用",150); windows.Columns.Add("PID / 架构",110); windows.Columns.Add("窗口标题",380);
+            windows.Columns.Add("截图保护 / 状态",340); windowCard.Controls.Add(windows); layout.Controls.Add(windowCard,0,2);
+            windows.Resize+=(s,e)=>AdjustColumns();
+
+            var buttons=new FlowLayoutPanel { Dock=DockStyle.Fill,WrapContents=false,Padding=new Padding(0,12,0,0),Margin=Padding.Empty };
+            MakeButton(apply,"解除选中窗口",140); MakeButton(restore,"恢复原设置",125); MakeButton(refresh,"刷新窗口",104);
+            MakeButton(demo,"打开测试窗口",140); MakeButton(elevate,"以管理员重启",140);
+            apply.BackColor=Color.FromArgb(0,112,245); apply.ForeColor=Color.White; apply.FlatAppearance.BorderSize=0;
+            buttons.Controls.AddRange(new Control[]{apply,restore,refresh,demo,elevate}); layout.Controls.Add(buttons,0,3);
+            maintain.Text="持续解除 · 每秒检查选中窗口，正常退出时恢复原设置";
+            maintain.AutoSize=true; maintain.Checked=true; maintain.Dock=DockStyle.Fill; layout.Controls.Add(maintain,0,4);
+
+            var updates=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=3,RowCount=2,Margin=Padding.Empty };
+            updates.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,112)); updates.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,125)); updates.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+            updates.RowStyles.Add(new RowStyle(SizeType.Absolute,36)); updates.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            MakeButton(checkUpdate,"检查更新",104); MakeButton(downloadUpdate,"下载更新",117); downloadUpdate.Visible=false;
+            updates.Controls.Add(checkUpdate,0,0); updates.Controls.Add(downloadUpdate,1,0);
+            updates.Controls.Add(new Label { Text="v"+GitHubUpdates.CurrentVersion,ForeColor=Color.DimGray,AutoSize=true,Anchor=AnchorStyles.Right },2,0);
+            updateSummary.Dock=DockStyle.Fill; updateSummary.ForeColor=Color.FromArgb(90,96,105); updateSummary.AutoEllipsis=true;
+            updates.Controls.Add(updateSummary,0,1); updates.SetColumnSpan(updateSummary,3); layout.Controls.Add(updates,0,5);
+
+            var logCard=new GroupBox { Text="操作日志",Dock=DockStyle.Fill,Padding=new Padding(10),BackColor=Color.White,Margin=new Padding(0,0,0,4) };
             log.Dock=DockStyle.Fill; log.Multiline=true; log.ReadOnly=true; log.ScrollBars=ScrollBars.Vertical;
-            log.BackColor=Color.White; layout.Controls.Add(log,0,6);
-            summary.Text="就绪 · 不支持 ARM64、DRM 视频或拒绝加载钩子的受保护进程。";
-            summary.Dock=DockStyle.Fill; summary.Padding=new Padding(0,10,0,0); layout.Controls.Add(summary,0,7);
+            log.BackColor=Color.White; log.BorderStyle=BorderStyle.None; logCard.Controls.Add(log); layout.Controls.Add(logCard,0,6);
+            summary.Text="就绪 · 仅处理普通桌面窗口的截图保护。";
+            summary.Dock=DockStyle.Fill; summary.AutoEllipsis=true; summary.Padding=new Padding(0,8,0,0); summary.ForeColor=Color.DimGray; layout.Controls.Add(summary,0,7);
+
             refresh.Click+=(s,e)=>RefreshWindows(); filter.TextChanged+=(s,e)=>RenderWindows();
             apply.Click+=async(s,e)=>await ApplySelected(); restore.Click+=async(s,e)=>await RestoreAll();
             elevate.Click+=async(s,e)=>await Elevate(); demo.Click+=(s,e)=>OpenDemo();
+            checkUpdate.Click+=async(s,e)=>await CheckUpdates(true); downloadUpdate.Click+=(s,e)=>OpenUpdate();
+            settings.Click+=(s,e)=>OpenSettings();
             timer.Interval=1000; timer.Tick+=async(s,e)=>await Maintain(); timer.Start();
             FormClosing+=OnClosing;
-            Shown+=(s,e)=> { RefreshWindows(); Log("仅处理明确选中的窗口；切换筛选或刷新不会自动修改其他窗口。"); };
+            FormClosed+=(s,e)=> { updateLifetime.Cancel(); updateLifetime.Dispose(); };
+            Shown+=async(s,e)=> {
+                RefreshWindows(); Log("仅处理明确选中的窗口；切换筛选或刷新不会自动修改其他窗口。");
+                try {
+                    await Task.Delay(1200,updateLifetime.Token);
+                    if(!closing && !IsDisposed && UpdateOptions.ShouldCheck(DateTime.UtcNow)) await CheckUpdates(false);
+                } catch(OperationCanceledException) { }
+            };
             bool admin=new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
             if(admin) { Text+="（管理员）"; elevate.Enabled=false; }
+            RenderUpdateState();
         }
-        void MakeButton(Button b,string text,int width) { b.Text=text; b.Width=width; b.Height=33; b.Margin=new Padding(0,0,8,0); }
+        void AdjustColumns() {
+            if(windows.Columns.Count!=4) return;
+            int available=Math.Max(620,windows.ClientSize.Width-24);
+            windows.Columns[0].Width=150; windows.Columns[1].Width=110;
+            windows.Columns[2].Width=(available-260)*55/100;
+            windows.Columns[3].Width=available-260-windows.Columns[2].Width;
+        }
+        void OpenSettings() {
+            if(settingsWindow==null || settingsWindow.IsDisposed) settingsWindow=new SettingsForm(this);
+            settingsWindow.Show(this); settingsWindow.Activate();
+        }
+        internal async Task CheckUpdates(bool manual) {
+            if(IsCheckingUpdates || closing || IsDisposed) return;
+            IsCheckingUpdates=true; AvailableUpdate=null;
+            UpdateStatus="正在检查 GitHub 更新…"; RenderUpdateState();
+            UpdateOptions.RecordAttempt(DateTime.UtcNow);
+            if(UpdateOptions.LastSaveError!=null) Log(UpdateOptions.LastSaveError);
+            try {
+                var release=await GitHubUpdates.CheckAsync(updateLifetime.Token);
+                if(IsDisposed) return;
+                ReleaseVersion current; ReleaseVersion.TryParse(GitHubUpdates.CurrentVersion,out current);
+                if(release.Version.CompareTo(current)>0) {
+                    AvailableUpdate=release;
+                    UpdateStatus="发现新版本 v"+release.Version+(release.HasDownload?" · 可从 GitHub 下载 Windows 更新包。":" · Windows 更新包尚未发布，可查看发布页。");
+                } else {
+                    UpdateStatus=release.Version.CompareTo(current)==0?"已是最新版本 · v"+GitHubUpdates.CurrentVersion:
+                        "当前版本 v"+GitHubUpdates.CurrentVersion+" · GitHub 最新正式版 v"+release.Version;
+                }
+            } catch(OperationCanceledException) { }
+            catch(Exception error) {
+                if(IsDisposed) return;
+                UpdateStatus=error is InvalidDataException?error.Message:"检查更新失败，请稍后重试。";
+                if(manual) Log(UpdateStatus);
+            } finally {
+                IsCheckingUpdates=false;
+                if(!IsDisposed) RenderUpdateState();
+            }
+        }
+        internal void OpenUpdate() {
+            if(AvailableUpdate==null || closing) return;
+            try {
+                Uri url=AvailableUpdate.DownloadURL ?? AvailableUpdate.ReleaseURL;
+                Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute=true });
+                UpdateStatus=AvailableUpdate.HasDownload?"已在浏览器打开 GitHub 下载。完整解压后，先退出旧版，再运行新版。":"已打开本项目的 GitHub 发布页。";
+            } catch(Exception error) {
+                if(!(error is Win32Exception || error is InvalidOperationException)) throw;
+                UpdateStatus="未能打开浏览器，请访问项目的 GitHub Releases 页面。";
+            }
+            RenderUpdateState();
+        }
+        void RenderUpdateState() {
+            checkUpdate.Enabled=!IsCheckingUpdates;
+            downloadUpdate.Visible=AvailableUpdate!=null;
+            downloadUpdate.Enabled=!IsCheckingUpdates;
+            downloadUpdate.Text=AvailableUpdate!=null && !AvailableUpdate.HasDownload?"查看发布页":"下载更新";
+            updateSummary.Text=UpdateStatus;
+            if(UpdateStateChanged!=null) UpdateStateChanged();
+        }
+        void MakeButton(Button b,string text,int width) { b.Text=text; b.Width=width; b.Height=33; b.Margin=new Padding(0,0,8,0); b.FlatStyle=FlatStyle.Flat; b.FlatAppearance.BorderColor=Color.FromArgb(208,212,219); b.BackColor=Color.White; }
         void Log(string message) { log.AppendText(DateTime.Now.ToString("HH:mm:ss")+"  "+message+Environment.NewLine); }
         void SetBusy(bool value) {
             busy=value; refresh.Enabled=apply.Enabled=restore.Enabled=demo.Enabled=!value;

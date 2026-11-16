@@ -1,100 +1,155 @@
-Capture Access for macOS · v0.2.0
+Capture Access for macOS · v0.8.0
 =================================
 
 功能
-- 使用 macOS 自带窗口选择器选择单个窗口并截图。
-- 预览、再次截图、保存 PNG、复制图片。
-- Retina 像素尺寸；超大窗口等比缩小，限制单张图像的内存开销。
-- 处理取消选择、截图超时、系统授权和窗口失效。
-- 内置独立演示应用，可切换旧式 NSWindow.sharingType 保护。
-- 不录制音频，不自动保存图片，不上传窗口内容。
+- 右上角菜单栏截图工具；关闭预览窗口后，菜单和全局热键仍可使用。
+- 普通区域截图：在屏幕上自由框选、移动和调整大小，确认后复制。
+- 特殊应用截图：首次选择要单独处理的应用，以后可在设置中更换；兼容的应用开启一次后可连续截图。
+- 普通截图和特殊截图各有独立热键，可在设置中修改。
+- 所有成功的截图均可预览、复制或另存 PNG；默认自动保留本地截图历史。
+- 可关闭历史记录，也可清空已有历史和当前预览。
+- 支持 macOS 系统窗口选择器、Retina 原始像素裁剪、取消和超时处理。
+- 不录制音频，不上传截图内容。
+- 检查 GitHub 正式版本更新，提供对应平台下载入口；自动检查可关闭。
+- 可选登录时自动启动，默认关闭。
 
 系统要求
 macOS 14 Sonoma 或更新版本，Intel x86_64 / Apple Silicon arm64。
 构建需要 Xcode 15+ 或带 macOS 14+ SDK 的 Command Line Tools，以及 Swift 5.9+。
 依赖均为系统框架，不依赖第三方 Swift 包。
 
+首次使用
+1. 启动完整的 CaptureAccess.app。右上角会显示截图图标；首次启动会打开设置。
+2. 在“特殊截图应用”中选择需要单独处理的应用。只用普通截图时，可点“暂不选择”。
+3. 核对两组截图热键和“自动保留截图历史”开关，点击“完成”。
+4. 点击右上角图标打开截图菜单，也可选择“打开截图工具”查看预览和历史。
+5. 随时从菜单中的“设置…”更换应用、热键或历史偏好；这些设置在重启工具后保留。
+   正在截图或特殊模式开启时，须先完成操作并结束特殊模式，才能更换目标应用。
+
+普通区域截图
+默认全局热键为 Control+Option+A，也可点击“普通区域截图”。
+首次使用需要 macOS 屏幕录制权限；按系统提示允许 Capture Access，必要时完全退出并重新启动工具。
+工具会取得各显示器的当前画面，在任一显示器上拖动选择矩形区域。每个选区限定在一块显示器内。
+松开鼠标后继续保留选区，拖动内部移动，拖动四边中点或四角调整大小；在选区外拖动可重新选择。
+点击“确认并复制”或按 Return/Enter 后才生成截图，并更新预览和剪贴板。
+“全屏”按钮只选中当前显示器的完整画面，仍需确认。
+按 Esc、右键或点击“取消”放弃本次截图，原预览和剪贴板保留。
+截图取自开始框选时的固定画面，选区控制点、提示栏和遮罩不会进入结果。
+普通截图获取屏幕上可见的内容；遮挡和应用自身的截图限制会影响结果。
+特殊模式开启期间也可使用普通区域截图，不需要结束特殊模式。
+
+选择窗口截图
+从菜单或主窗口点击“选择窗口并截图”，在系统选择器中确认一个窗口。
+选择完成后显示预览，可复制、另存或从历史再次打开。
+“再次截图”获取上次选择窗口的新内容；窗口关闭或选择失效后需要重新选择。
+特殊模式开启时，普通区域截图仍可用；系统选窗功能需先结束特殊模式。
+全透明图不会被标记为成功；窗口采集会尝试同一目标的短时采集，仍不可用时显示错误并保留旧预览。
+
+特殊应用连续截图
+“特殊截图应用”指在 macOS 上主动禁止或限制用户截图该应用的情况，普通截图可能出现黑屏、透明图片或遗漏窗口。
+可在设置中选择这类应用尝试特殊截图。说明同时显示在主窗口、设置及“关于与授权声明”中。
+此功能目前适用于兼容的 Electron 页面应用，并非所有 Mac 应用都支持。
+设置中允许选择 Mac 应用；开启模式前会检查兼容性，不兼容时提示使用普通截图或系统选窗。
+部分应用可能关闭页面连接、隐藏页面或限制截图，实际结果仍须以预览为准。
+
+1. 在设置中选择目标应用后，按默认热键 Control+Option+S，或点击“开启特殊应用截图…”。
+2. 保存目标应用中正在编辑的内容，再确认“重启一次并开启”。工具会重启所选应用一次。
+3. 准备完成后，在目标应用打开要截取的页面。之后按特殊截图热键会自动切到目标应用，再获取其当前窗口；通常无需先手动点选窗口。
+4. 框选后可移动和调整选区，点击“确认并复制”或按回车完成；Esc、右键或“取消”仅取消本次框选。
+5. 浮层中的“整窗”只选中完整画面，仍需确认；主窗口或菜单中的整窗截图按钮直接获取整窗图片。
+6. 切换页面后可反复按热键截图，无需每次重启。保存、复制和清除预览均不结束模式。
+7. 点击“结束特殊模式”或退出 Capture Access 后，会关闭临时连接并恢复目标应用的普通启动。
+   若目标应用显示保存/退出提示，工具不会强制关闭它；请保存内容并处理提示，必要时手动重新打开。
+   若用户主动退出目标应用，模式会自动结束，不会再次打开已退出的应用。
+
+特殊截图只读取所选应用的页面；不包含其他应用、系统窗口边框或系统弹窗。
+窗口位置无法可靠匹配时，会在屏幕中显示完整页面供框选，不会用背后的桌面内容代替目标页面。
+截图前会切到目标应用，并等待窗口焦点稳定后重新识别页面。多页面仍无法明确确定目标时会报错，可点选所需窗口或关闭多余窗口后重试。
+该模式使用仅限父子进程的私有连接，不开放网络端口，也不改写目标应用文件或组织设置。
+它不会改变系统截图快捷键或其他截图软件的行为。
+完整应用内置页面截图组件，不需要 Node.js 或终端。
+
+版本检测与下载
+从菜单栏“检查更新…”或“关于与授权声明”中的“检查更新”查询本仓库的最新正式版本。
+设置中的“自动检查更新”默认开启；启动时最多每 24 小时查询一次，关闭后仍可手动检查。
+发现新版后，点击“从 GitHub 下载更新”，浏览器将从 d-c-huang/capture-access 的 Releases 下载 macOS 通用 ZIP。
+如果新版尚未提供 macOS 文件，可点击“查看 GitHub 发布页”；不会改为下载其他平台的文件。
+工具不会自动安装或执行新版本。下载完成后，结束当前操作并退出工具，再替换完整的 CaptureAccess.app。
+网络不可用或 GitHub 暂时限制请求时，可稍后手动重试；原有截图功能仍可使用。
+版本查询不上传截图、历史、窗口标题或日志。GitHub 会收到正常网络请求所需的信息，例如 IP 地址及应用版本标识。
+
+登录时自动启动
+可在设置的“启动与更新”中开启或关闭“登录 Mac 时启动”，默认关闭。
+该选项在用户登录后启动菜单栏工具，不会自动开启目标应用的特殊截图模式。
+如 macOS 提示需要批准后台/登录项目，请按照系统设置提示完成。
+
+关于与软件许可
+点击菜单栏“关于与授权声明…”、设置底部同名按钮或主窗口“关于”，可查看用途、版本、截图说明、数据保存方式和软件许可。
+Capture Access macOS 版本采用 MIT License；完整原文见本目录 LICENSE.txt，也随应用打包，可在关于窗口展开查看。
+MIT 允许个人与商业使用、复制、修改及分发，须保留版权和许可声明；软件按原样提供，不作保证，具体以许可原文为准。
+许可仅适用于本软件，不授予截图内容或第三方应用的权利。
+
+修改热键
+菜单“设置…”中分别选择“特殊应用框选”和“普通区域截图”的修饰键、字母或数字，再点击“应用热键”。
+两组热键不能相同。系统或其他应用占用组合键时会显示提示；已有可用热键会恢复，可换一组后重试。
+热键更新后，主窗口和菜单中的显示同步变化。修改后的设置会自动保留。
+默认热键：
+  Control+Option+S  特殊应用区域截图；未开启模式时显示开启提示
+  Control+Option+A  普通区域截图
+  Return / Enter   确认选区并复制
+  Esc / 鼠标右键    取消当前框选
+  Command+,        设置
+  Command+Shift+1  系统选择窗口并截图
+  Command+Shift+2  再次截取所选窗口
+  Command+S        保存当前预览 PNG
+  Command+Shift+C  复制当前预览
+
+保存、历史与清空
+每张截图都可通过“另存 PNG…”保存到用户选择的位置，与是否保留历史无关。
+默认开启“自动保留截图历史”，成功截图会保存在本机：
+  ~/Library/Application Support/CaptureAccess/History
+工具在后台写入 PNG 和历史索引；退出时会等待未完成的保存。
+历史列表按时间从新到旧显示，点击某张后可再次复制或另存，不会重复新增历史。
+设置中关闭历史记录后，后续截图只更新当前预览；仍可复制或手动保存。
+关闭历史记录不会删除已有历史。要移除已有记录，可在历史列表点击“清空”，或使用菜单“清空截图…”。
+确认清空后，工具保存的历史图片移至废纸篓，当前预览一并清除；手动另存的 PNG 和剪贴板不受影响。
+“清除预览”只清除当前预览，不删除历史图片，也不修改剪贴板。
+历史保存失败会显示错误；当前截图仍可手动复制和保存。
+
 构建和运行
 在项目根目录执行：
   bash macos/build.sh
-脚本默认构建当前 Mac 架构，在 macos/dist 下生成：
-  CaptureAccess.app
-  CaptureAccess-macOS-<架构>.zip
-演示应用内置于 CaptureAccess.app/Contents/Resources/CaptureAccessDemo.app。
-双击 CaptureAccess.app 启动，或执行：
-  open macos/dist/CaptureAccess.app
-
-通用二进制
+默认构建当前 Mac 架构，在 macos/dist 下生成 CaptureAccess.app 和 CaptureAccess-macOS-<架构>.zip。
+构建 Intel 与 Apple Silicon 通用版本：
   bash macos/build.sh --arch universal
 也支持 --arch arm64 或 --arch x86_64。
+演示应用内置于 CaptureAccess.app/Contents/Resources/CaptureAccessDemo.app。
+页面截图组件内置于 CaptureAccess.app/Contents/Helpers/CaptureAccessPageBridge。
+应使用完整 .app 验证权限、设置和菜单栏行为，不使用 swift run 代替正式应用验收。
 
-签名
-默认使用本地 ad-hoc 签名，无需开发者账户；这不等于 Apple 公证。
-正式分发时需使用自己的 Developer ID 签名并另行公证。
-例如提供现有签名身份：
+签名与权限
+构建脚本在钥匙串中恰有一个有效 Apple Development 身份时使用该身份，保持更新后的权限身份稳定。
+没有唯一开发身份时退回本地 ad-hoc 签名；也可用 SIGN_IDENTITY=- 明确选择 ad-hoc。
+上述签名不等于 Apple 公证；正式分发需使用自己的 Developer ID 签名并另行公证。
+例如：
   SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' bash macos/build.sh --arch universal
-签名身份属于本机钥匙串配置，项目不包含证书或凭据。
+项目不包含证书或凭据。
+若从旧 ad-hoc 版本更新后，屏幕录制开关已打开仍报权限错误，可从系统列表移除旧条目，再添加当前 .app 并授权、重启。
+系统窗口选择器确认与系统级屏幕录制权限并非在所有 macOS 版本中等价；普通区域截图需要屏幕录制权限。
 
-使用
-1. 启动完整的 .app 包，点击“选择窗口并截图”。
-2. 在系统选择器中选择目标窗口并确认。
-3. 若系统要求屏幕录制权限，按提示授权；也可点击界面中的授权或系统设置按钮。
-   某些系统版本需要授权后完全退出并重新启动应用。
-4. 在预览区查看实际图像，再保存 PNG 或复制图片。
-5. “再次截图”重新获取同一已选择窗口；窗口关闭或选择失效后，需要重新选择。
-6. “清除预览与选择”释放选择并清除本次预览，不清空此前主动复制到剪贴板的图片。
+源码与验证
+Sources/CaptureAccessMac/          菜单栏、设置、截图、选区编辑和历史界面
+Sources/CaptureCore/               尺寸、裁剪、PNG 和历史存储
+Sources/PageCaptureCore/           目标应用与页面校验、私有连接、超时及取消
+Sources/CaptureAccessPageBridge/   页面应用启动组件
+Sources/CaptureAccessDemo/         独立测试窗口
+Tests/CaptureCoreTests/            图像、选区和历史存储测试
+Tests/PageCaptureCoreTests/        应用校验、页面选择与连接测试
+Tests/MANUAL-TESTS.txt              当前版本的界面和真实截图验收步骤
+TEST-REPORT.txt                    实际执行过的验证记录
 
-快捷键
-Command+Shift+1  选择窗口并截图
-Command+Shift+2  再次截图
-Command+S        保存 PNG
-Command+Shift+C  复制图片
-
-与 Windows 版的区别
-此实现采用用户确认的“直接截图”方案。
-它不会取消其他进程的窗口保护，也不承诺系统快捷键或其他截图软件获得相同结果。
-旧的 NSWindow.sharingType = .none 在较新 macOS 中可能不影响 ScreenCaptureKit。
-截图是否可用须以实际预览为准；DRM 视频或应用主动隐藏的内容仍可能不可见。
-截图 API 返回图像不表示图像一定含有目标内容，保存前请查看预览。
-旧版本 macOS 上设置保护的窗口也可能无法选取，或截图为空白。
-应用启动时不主动读取桌面；仅在用户选窗后请求单帧截图。
-系统选择器的授权与系统级屏幕录制授权并不在所有 macOS 版本中等价。
-若单帧截图 API 返回拒绝访问，请按系统提示授权，不应将选择器确认视为已经获得全部权限。
-
-源码
-Package.swift                         Swift Package Manager 项目
-Sources/CaptureAccessMac/             SwiftUI 主应用、系统选择器与截图逻辑
-Sources/CaptureCore/                  尺寸与 PNG 编码
-Sources/CaptureAccessDemo/            独立的保护测试窗口
-Resources/                           应用及演示应用的 Info.plist
-Tests/CaptureCoreTests/               尺寸边界、Retina 尺寸、PNG 解码与像素测试
-Tests/MANUAL-TESTS.txt                系统权限与真实截图手动验收步骤
-build.sh                             构建、签名和 ZIP 打包脚本
-
-测试
-  cd macos
-  swift test
-测试只检查图像处理与尺寸行为，不会开启屏幕录制。
-界面、授权、目标窗口和旧式保护行为需要按 Tests/MANUAL-TESTS.txt 在 Mac 上实测。
-不要直接用 swift run 代替正式 .app 验收：无 Bundle 时，权限身份、演示路径和启动行为可能不同。
-
-当前验证状态
-已在 GitHub 的 macOS 15.8.2 ARM64 主机上原生构建，使用 Xcode 16.4 / Swift 6.1.2。
-4 项 XCTest 全部通过，arm64 与 x86_64 两种 Release 构建成功，并已合并为 universal 应用。
-codesign --verify --deep --strict 验证通过，已上传原始 Mac 生成的 ZIP。
-实际窗口截图、系统授权、剪贴板和界面仍需在 Mac 上手动验收。
-详细记录：TEST-REPORT.txt。
-
-GitHub macOS 构建
-仓库根目录的 .github/workflows/build-macos.yml 支持手动触发。
-在 GitHub Actions 中选择 Build macOS app，选择 universal / arm64 / x86_64。
-它在 macos-15 主机运行 swift test 和本目录的 build.sh，再上传应用 ZIP 与校验值。
-整个原生编译和打包过程在 Mac 上执行。
-main 分支中的 macOS 代码或工作流更新也会自动触发；文档记录提交可使用 [skip ci] 避免重复构建。
-成功构建：https://github.com/d-c-huang/capture-access/actions/runs/43838699586
-
-接口参考（官方）
-https://developer.apple.com/documentation/screencapturekit/sccontentsharingpicker
-https://developer.apple.com/documentation/screencapturekit/scscreenshotmanager
-https://developer.apple.com/documentation/appkit/nswindow/sharingtype-swift.enum/none
-https://www.electronjs.org/docs/latest/api/browser-window#winsetcontentprotectionenable-macos-windows
+自动测试：
+  swift test --package-path macos
+测试不会开启屏幕录制，也不会自动重启用户的目标应用。
+新版本的界面、授权、实际截图与全局热键应按 MANUAL-TESTS.txt 验收；手动步骤是待执行的检查清单，不代表已经通过。
+构建流程也可使用仓库的 .github/workflows/build-macos.yml；实际系统权限和截图内容仍需在 Mac 上核对。

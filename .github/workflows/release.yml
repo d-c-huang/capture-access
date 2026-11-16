@@ -1,0 +1,118 @@
+name: Build and release Windows and macOS
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  public-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check public source and illustration files
+        run: python3 scripts/check-public-files.py --tracked
+      - name: Test public-file checks
+        run: python3 scripts/test-public-files.py
+      - name: Check platform version agreement
+        run: python3 scripts/check-version.py
+
+  macos:
+    needs: public-files
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Swift tests
+        run: swift test --package-path macos
+      - name: Check preferences and hotkeys
+        run: bash macos/Tests/run-settings-checks.sh
+      - name: Build public universal app
+        env:
+          SIGN_IDENTITY: '-'
+        run: bash macos/build.sh --arch universal
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-macos
+          path: macos/dist/CaptureAccess-macOS-universal.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    needs: public-files
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build Windows app and both native architectures
+        shell: powershell
+        run: .\windows\build.ps1
+      - name: Test update checking and startup configuration
+        shell: powershell
+        run: .\windows\tests\updates.ps1
+      - name: Test selected-window protection and restoration
+        shell: powershell
+        run: .\windows\tests\integration.ps1
+      - name: Package Windows app
+        shell: powershell
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'capture-access-package'
+          New-Item -ItemType Directory -Path "$package\bin" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$package\tests" -Force | Out-Null
+          Copy-Item windows\dist\CaptureAccess.exe,windows\README.txt $package
+          foreach ($file in @('CaptureHook32.dll', 'CaptureHook64.dll', 'CaptureHelper32.exe', 'CaptureHelper64.exe')) {
+            Copy-Item "windows\dist\bin\$file" "$package\bin"
+          }
+          Copy-Item windows\dist\tests\Demo32.exe,windows\dist\tests\Demo64.exe "$package\tests"
+          Compress-Archive -Path "$package\*" -DestinationPath windows\CaptureAccess-Windows.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: windows/CaptureAccess-Windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-artifacts
+      - name: Publish a new version only after both platforms pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_VALUE="$(python3 scripts/check-version.py)"
+          RELEASE_TAG="v$VERSION_VALUE"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists; its files are left unchanged."
+            exit 0
+          fi
+          test -f release-artifacts/CaptureAccess-Windows.zip
+          test -f release-artifacts/CaptureAccess-macOS-universal.zip
+          (cd release-artifacts && sha256sum CaptureAccess-Windows.zip CaptureAccess-macOS-universal.zip > SHA256SUMS.txt)
+          gh release create "$RELEASE_TAG" \
+            release-artifacts/CaptureAccess-Windows.zip \
+            release-artifacts/CaptureAccess-macOS-universal.zip \
+            release-artifacts/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "Capture Access $VERSION_VALUE" \
+            --notes-file docs/RELEASE-NOTES.md --latest

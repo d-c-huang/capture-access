@@ -4,6 +4,36 @@ import XCTest
 @testable import CaptureCore
 
 final class CaptureCoreTests: XCTestCase {
+    func testTransparentScreenshotIsRejected() throws {
+        let context = try imageContext(width: 13, height: 7)
+        let image = try XCTUnwrap(context.makeImage())
+        XCTAssertTrue(try CaptureImageValidation.isFullyTransparent(image))
+    }
+
+    func testOpaqueBlackIsNotMistakenForTransparentCapture() throws {
+        let context = try imageContext(width: 13, height: 7)
+        context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 13, height: 7))
+        let image = try XCTUnwrap(context.makeImage())
+        XCTAssertFalse(try CaptureImageValidation.isFullyTransparent(image))
+    }
+
+    func testSingleVisiblePixelIsPreserved() throws {
+        let context = try imageContext(width: 101, height: 75)
+        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 0.5)
+        context.fill(CGRect(x: 100, y: 0, width: 1, height: 1))
+        let image = try XCTUnwrap(context.makeImage())
+        XCTAssertFalse(try CaptureImageValidation.isFullyTransparent(image))
+    }
+
+    private func imageContext(width: Int, height: Int) throws -> CGContext {
+        try XCTUnwrap(CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+    }
+
     func testRetinaSizeIsPixelAccurate() throws {
         let size = try CaptureSize.calculate(points: CGSize(width: 800, height: 600), scale: 2)
         XCTAssertEqual(size.width, 1600)

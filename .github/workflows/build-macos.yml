@@ -1,11 +1,8 @@
 name: Build macOS app
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'macos/**'
-      - '.github/workflows/build-macos.yml'
+  # The cross-platform release workflow handles pushes. Keep this manual
+  # workflow for building a single Mac architecture during development.
   workflow_dispatch:
     inputs:
       architecture:
@@ -43,6 +40,8 @@ jobs:
         run: swift test
 
       - name: Build app and ZIP on macOS
+        env:
+          SIGN_IDENTITY: '-'
         run: bash macos/build.sh --arch "$TARGET_ARCH"
 
       - name: Write checksums
