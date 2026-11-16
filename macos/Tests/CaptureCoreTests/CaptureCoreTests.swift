@@ -16,7 +16,7 @@ final class CaptureCoreTests: XCTestCase {
             (CGSize(width: 0, height: 100), CGFloat(1)),
             (CGSize(width: 100, height: -1), CGFloat(1)),
             (CGSize(width: 100, height: 100), CGFloat.nan),
-            (CGSize(width: .infinity, height: 100), CGFloat(1)),
+            (CGSize(width: CGFloat.infinity, height: 100), CGFloat(1)),
             (CGSize(width: 100, height: 100), CGFloat(0))
         ] {
             XCTAssertThrowsError(try CaptureSize.calculate(points: size, scale: scale))
